@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS genres_artists (
 CREATE TABLE IF NOT EXISTS albums(
 	id SERIAL PRIMARY KEY,
 	name VARCHAR(40) NOT null,
-	year date NOT NULL CHECK (year > 1960-01-01)
+	year date NOT NULL CHECK (year > '1960-01-01')
 );
 
 -- многие ко многим (artists_albums)
@@ -103,7 +103,23 @@ values(1,1,'WAKE UP!',212),
 (6,4,'Silent Night',300),
 (7,6,'Куда уходит детство',270),
 (8,6,'Если долго мучаться',146),
-(9,7,'Вселенная бесконечна?',248);
+(9,7,'Вселенная бесконечна?',248),
+(10,7,'myself',150),
+(11,7,'by myself',150),
+(12,7,'bemy self',150),
+(13,7,'myself by',150),
+(14,7,'by myself by',150),
+(15,7,'beemy',150),
+(16,7,'premyne',150),
+(17,7,'my darling',150),
+(18,7,'own my',150),
+(19,7,'my own',150),
+(20,7,'oh my God',150),
+(21,7,'my',150),
+(22,7,'мой друг',150),
+(23,7,'мой',150),
+(24,7,'мойдодыр',150),
+(25,7,'ах мой друг',150);
 
 insert into collections
 values(1,'Zivert: лучшее','2022-11-26'),
@@ -146,10 +162,17 @@ select name
 from artists
 where name not like '% %';
 
---Название треков, которые содержат слово «мой» или «my» -> заменила на "I" и "Я".
+--Название треков, которые содержат слово «мой» или «my»
 select name
 from tracks
-where name like '%Я%' or name like '%I%';
+where name ilike 'my %'
+or name ilike '% my'
+or name ilike '% my %'
+or name ilike 'my'
+or name ilike 'мой %'
+or name ilike '% мой'
+or name ilike '% мой %'
+or name ilike 'мой';
 
 --Задание 3
 --Количество исполнителей в каждом жанре.
@@ -158,11 +181,9 @@ from genres_artists
 group by genre_id;
 
 --Количество треков, вошедших в альбомы 2019–2020 годов.
-select albums.name, albums.year, count(tracks.id)
-from albums 
-join tracks on albums.id = tracks.album_id 
-where albums.year between '2019-01-01' and '2021-01-01'
-group by albums.name, albums.year;
+select count(tracks.id) from tracks
+join albums on tracks.album_id = albums.id 
+where albums.year between '2019-01-01' and '2021-01-01';
 
 --Средняя продолжительность треков по каждому альбому.
 select albums.name, avg(tracks.duration)
@@ -171,11 +192,13 @@ join tracks on albums.id = tracks.album_id
 group by albums.name;
 
 --Все исполнители, которые не выпустили альбомы в 2020 году.
-select artists.name, albums.year
+select artists.name
 from artists
-join artists_albums on artists.id = artists_albums.album_id
-join albums on artists_albums.album_id = albums.id 
-where albums.year != '2020-01-01';
+where artists.name not in (select artists.name
+						   from artists
+						   join artists_albums on artists.id = artists_albums.artist_id
+						   join albums on artists_albums.album_id = albums.id
+						   where albums.year = '2020-01-01');
 
 --Названия сборников, в которых присутствует конкретный исполнитель (выберите его сами).
 select distinct collections.name
@@ -200,7 +223,7 @@ having count(genres_artists.genre_id) > 1
 --Наименования треков, которые не входят в сборники.
 select tracks.name
 from tracks
-join tracks_collections on tracks.id = tracks_collections.track_id 
+left join tracks_collections on tracks.id = tracks_collections.track_id 
 where tracks_collections.track_id is null
 
 --Исполнитель или исполнители, написавшие самый короткий по продолжительности трек, 
